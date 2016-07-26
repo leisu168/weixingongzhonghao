@@ -1,0 +1,45 @@
+# -*- encoding: utf-8 -*-
+from pyspider.libs.base_handler import *
+from pyquery import PyQuery as pq  
+import re
+
+
+ 
+class Handler(BaseHandler):
+    crawl_config = {
+        "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/45.0.2454.101 Safari/537.36)", #配置用户代理，模拟普通用户
+        }
+    }
+    def __init__(self):
+        self.base_url = 'http://weixin.sogou.com/'
+
+        
+ 
+    @every(minutes=24 * 60)#每天执行一次
+    def on_start(self):
+        self.crawl(self.base_url,callback=self.index_page, fetch_type='js')
+            
+        
+    @config(age=10 * 24 * 60 * 60)#有效期10天
+    def index_page(self, response):
+        for each in response.doc('h4 > a').items():
+            self.crawl(each.attr.href, callback=self.detail_page, fetch_type='js')
+
+        
+        
+    @config(priority=2)#调度优先级
+    def detail_page(self, response):
+
+        return {
+            "链接": response.url,
+            "标题": response.doc('#activity-name').text(),
+            "日期": response.doc('#post-date').text(),
+            "作者": response.doc('#post-user').text(),
+            "内容": response.doc('#js_content').text(),
+            "公众号二维码": response.doc('#js_pc_qr_code_img').attr('src'),
+            "阅读数": response.doc('#sg_readNum3').text(),
+            "点赞数": response.doc('#sg_likeNum3').text(),
+            
+        }
+    
